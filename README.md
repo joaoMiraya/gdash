@@ -1,0 +1,54 @@
+## Levantamento de requisitos
+
+- API OpenWeather
+	- Temperatura
+	- Umidade
+	- Velocidade do vento
+	- Condição do céu
+	- Probabilidade de chuva
+- Queue com RabbitMQ ou Redis
+- Worker em Go
+	- Processamento dos dados da fila
+- Back End
+	- NestJs
+	- MongoDB
+	- Enviar dados normalizados para a fila
+	- Deve se comunicar com a OpenWeather
+	- Filtros
+	- Deve ter endpoint para exportar os dados para CSV e XLSX
+- Front End
+	- React Vite
+	- TailwindCSS
+	- Shadcn/ui
+	- Deve se comunicar apenas com a API
+	- Deve possuir um botão para baixar o relatório com os dados do clima
+- Python
+	- Coleta/Análise de dados
+	- requests
+	- pandas
+	- httpx
+- Docker para o ambiente
+
+✅ Checklist rápido
+
+- [] Python coleta dados de clima (Open-Meteo ou OpenWeather)
+- [] Python envia dados para a fila
+- [] Worker Go consome a fila e envia para a API NestJS
+- [] API NestJS:
+- [] Armazena logs de clima em MongoDB
+- [] Exponde endpoints para listar dados
+- [] Gera/retorna insights de IA (endpoint próprio)
+- [] Exporta dados em CSV/XLSX
+- [] Implementa CRUD de usuários + autenticação
+- [] (Opcional) Integração com API pública paginada
+- [] Frontend React + Vite + Tailwind + shadcn/ui:
+- [] Dashboard de clima com dados reais
+- [] Exibição de insights de IA
+- [] CRUD de usuários + login
+- [] (Opcional) Página consumindo API pública paginada
+- [] Docker Compose sobe todos os serviços
+- [] Código em TypeScript (backend e frontend)
+- [] Vídeo explicativo (máx. 5 minutos)
+- [] Pull Request via branch com seu nome completo
+- [] README completo com instruções de execução
+- [] Logs e tratamento de erros básicos em cada serviço
