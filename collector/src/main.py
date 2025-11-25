@@ -3,10 +3,10 @@ import sys
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from config.settings import get_settings
-from services.weather_api import WeatherAPIClient
-from services.queue_producer import QueueProducer
-from utils.logger import setup_logger, get_logger
+from src.config.settings import get_settings
+from src.services.weather_api import WeatherAPIClient
+from src.services.queue_producer import QueueProducer
+from src.utils.logger import setup_logger, get_logger
 
 # Setup
 setup_logger()

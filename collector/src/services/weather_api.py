@@ -2,9 +2,9 @@ import httpx
 from datetime import datetime, timezone
 from typing import Optional
 
-from ..config.settings import get_settings
-from ..models.weather_data import WeatherData
-from ..utils.logger import get_logger
+from src.config.settings import get_settings
+from src.models.weather_data import WeatherData
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
