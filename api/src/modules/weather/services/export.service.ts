@@ -6,9 +6,22 @@ import { WeatherLogDocument } from '../schemas/weather-log.schema';
 export class ExportService {
   generateCSV(data: WeatherLogDocument[]): string {
     const headers = [
-      'ID', 'City', 'Country', 'Temperature', 'Feels Like', 'Humidity',
-      'Pressure', 'Wind Speed', 'Wind Direction', 'Clouds', 'Visibility',
-      'Condition', 'Description', 'Rain 1h', 'Snow 1h', 'Collected At',
+      'ID',
+      'City',
+      'Country',
+      'Temperature',
+      'Feels Like',
+      'Humidity',
+      'Pressure',
+      'Wind Speed',
+      'Wind Direction',
+      'Clouds',
+      'Visibility',
+      'Condition',
+      'Description',
+      'Rain 1h',
+      'Snow 1h',
+      'Collected At',
     ];
 
     const rows = data.map((log) => [
@@ -93,7 +106,7 @@ export class ExportService {
       });
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    return buffer as Buffer;
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(arrayBuffer);
   }
 }

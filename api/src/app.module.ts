@@ -10,22 +10,19 @@ import { User, UserSchema } from './modules/users/schemas/user.schema';
 
 @Module({
   imports: [
-    // Configuração via .env
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
 
-    // MongoDB
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI', 'mongodb://localhost:27017/weather_insights'),
+        uri: configService.get<string>('MONGODB_URI'),
       }),
       inject: [ConfigService],
     }),
 
-    // Módulos da aplicação
     AuthModule,
     UsersModule,
     WeatherModule,

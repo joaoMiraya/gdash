@@ -2,18 +2,65 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
 
 import { WeatherLog, WeatherLogDocument } from '../schemas/weather-log.schema';
+type FilterType = {
+  city?: string;
+  collectedAt?: { $gte: Date; $lte?: Date };
+};
+
+interface InsightsResponse {
+  period: {
+    start: Date;
+    end: Date;
+    totalRecords: number;
+  };
+  statistics: {
+    temperature: {
+      avg: number;
+      min: number;
+      max: number;
+    };
+    humidity: {
+      avg: number;
+      min: number;
+      max: number;
+    };
+    windSpeed: {
+      avg: number;
+      max: number;
+    };
+  };
+  mostCommonCondition: string | null;
+  conditionDistribution: Record<string, number>;
+  insights: string[];
+  aiSummary?: string;
+}
 
 @Injectable()
 export class InsightsService {
-  constructor(
-    @InjectModel(WeatherLog.name) private weatherModel: Model<WeatherLogDocument>,
-    private configService: ConfigService,
-  ) {}
+  private client: OpenAI;
 
-  async generateInsights(city?: string) {
-    const match: any = {};
+  constructor(
+    @InjectModel(WeatherLog.name)
+    private weatherModel: Model<WeatherLogDocument>,
+    private configService: ConfigService,
+  ) {
+    const endpoint = this.configService.get<string>('AZURE_OPENAI_ENDPOINT');
+    const apiKey = this.configService.get<string>('AZURE_OPENAI_KEY');
+
+    this.client = new OpenAI({
+      apiKey,
+      baseURL: `${endpoint}/openai/deployments`,
+      defaultHeaders: { 'api-key': apiKey },
+    });
+  }
+
+  async generateInsights(
+    city?: string,
+  ): Promise<InsightsResponse | { message: string; insights: any[] }> {
+    const match: FilterType = {};
     if (city) match.city = city;
 
     // Busca dados dos últimos 7 dias
@@ -21,7 +68,10 @@ export class InsightsService {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     match.collectedAt = { $gte: sevenDaysAgo };
 
-    const data = await this.weatherModel.find(match).sort({ collectedAt: -1 }).exec();
+    const data = await this.weatherModel
+      .find(match)
+      .sort({ collectedAt: -1 })
+      .exec();
 
     if (data.length === 0) {
       return { message: 'No data available for insights', insights: [] };
@@ -29,60 +79,75 @@ export class InsightsService {
 
     const insights = this.analyzeData(data);
 
-    // Se tiver OpenAI configurada, gera insights com IA
-    const openaiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (openaiKey) {
-      const aiInsights = await this.generateAIInsights(data, openaiKey);
+    // IA via Azure OpenAI
+    const azureKey = this.configService.get<string>('AZURE_OPENAI_KEY');
+    if (azureKey) {
+      const aiInsights = await this.generateAIInsights(data);
       insights.aiSummary = aiInsights;
     }
 
     return insights;
   }
 
-  private analyzeData(data: WeatherLogDocument[]) {
+  private analyzeData(data: WeatherLogDocument[]): InsightsResponse {
     const temps = data.map((d) => d.temperature);
     const humidities = data.map((d) => d.humidity);
     const windSpeeds = data.map((d) => d.windSpeed);
 
     const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
-    const avgHumidity = humidities.reduce((a, b) => a + b, 0) / humidities.length;
-    const avgWindSpeed = windSpeeds.reduce((a, b) => a + b, 0) / windSpeeds.length;
+    const avgHumidity =
+      humidities.reduce((a, b) => a + b, 0) / humidities.length;
+    const avgWindSpeed =
+      windSpeeds.reduce((a, b) => a + b, 0) / windSpeeds.length;
 
     const conditions = data.map((d) => d.condition);
-    const conditionCounts = conditions.reduce((acc, cond) => {
-      acc[cond] = (acc[cond] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const conditionCounts = conditions.reduce(
+      (acc, cond) => {
+        acc[cond] = (acc[cond] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const mostCommonCondition = Object.entries(conditionCounts).sort((a, b) => b[1] - a[1])[0];
+    const mostCommonCondition = Object.entries(conditionCounts).sort(
+      (a, b) => b[1] - a[1],
+    )[0];
 
     const insights: string[] = [];
 
-    // Análise de temperatura
+    // Temperatura
     if (avgTemp > 30) {
-      insights.push('🌡️ Temperaturas elevadas detectadas. Recomenda-se hidratação frequente.');
+      insights.push(
+        'Temperaturas elevadas detectadas. Recomenda-se hidratação frequente.',
+      );
     } else if (avgTemp < 10) {
-      insights.push('❄️ Temperaturas baixas no período. Agasalhe-se adequadamente.');
+      insights.push(
+        'Temperaturas baixas no período. Agasalhe-se adequadamente.',
+      );
     }
 
-    // Análise de umidade
+    // Umidade
     if (avgHumidity < 30) {
-      insights.push('💨 Umidade do ar muito baixa. Considere usar umidificadores.');
+      insights.push(
+        '💨 Umidade do ar muito baixa. Considere usar umidificadores.',
+      );
     } else if (avgHumidity > 80) {
       insights.push('💧 Alta umidade detectada. Possibilidade de chuvas.');
     }
 
-    // Análise de vento
+    // Vento
     if (avgWindSpeed > 10) {
       insights.push('🌬️ Ventos fortes registrados. Atenção a objetos soltos.');
     }
 
-    // Tendência de temperatura
+    // Tendência
     if (data.length >= 2) {
       const recent = data.slice(0, Math.ceil(data.length / 2));
       const older = data.slice(Math.ceil(data.length / 2));
-      const recentAvg = recent.reduce((a, b) => a + b.temperature, 0) / recent.length;
-      const olderAvg = older.reduce((a, b) => a + b.temperature, 0) / older.length;
+      const recentAvg =
+        recent.reduce((a, b) => a + b.temperature, 0) / recent.length;
+      const olderAvg =
+        older.reduce((a, b) => a + b.temperature, 0) / older.length;
 
       if (recentAvg > olderAvg + 2) {
         insights.push('📈 Tendência de aquecimento nos últimos dias.');
@@ -119,7 +184,9 @@ export class InsightsService {
     };
   }
 
-  private async generateAIInsights(data: WeatherLogDocument[], apiKey: string): Promise<string> {
+  private async generateAIInsights(
+    data: WeatherLogDocument[],
+  ): Promise<string> {
     try {
       const summary = {
         city: data[0].city,
@@ -128,32 +195,36 @@ export class InsightsService {
         conditions: [...new Set(data.map((d) => d.condition))],
       };
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'Você é um meteorologista. Forneça um resumo breve e útil em português.',
-            },
-            {
-              role: 'user',
-              content: `Analise estes dados climáticos e forneça insights úteis em 2-3 frases: ${JSON.stringify(summary)}`,
-            },
-          ],
-          max_tokens: 150,
-        }),
+      const deployment = this.configService.get<string>(
+        'AZURE_OPENAI_DEPLOYMENT',
+        'gpt-35-turbo',
+      );
+
+      const response = await this.client.chat.completions.create({
+        model: deployment,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Você é um meteorologista. Resuma insights climáticos em 2-3 frases.',
+          },
+          {
+            role: 'user',
+            content: `Analise estes dados climáticos: ${JSON.stringify(
+              summary,
+            )}`,
+          },
+        ],
+        max_tokens: 150,
       });
 
-      const result = await response.json();
-      return result.choices?.[0]?.message?.content || 'Não foi possível gerar insights de IA.';
-    } catch {
-      return 'Erro ao gerar insights de IA.';
+      return (
+        response.choices[0]?.message?.content ??
+        'Não foi possível gerar insights.'
+      );
+    } catch (e) {
+      console.error(e);
+      return 'Erro ao gerar insights via Azure OpenAI.';
     }
   }
 }

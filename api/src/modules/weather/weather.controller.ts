@@ -1,5 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, Res, UseGuards } from '@nestjs/common';
-import { Response } from 'express';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import type { Response } from 'express';
 
 import { WeatherService } from './weather.service';
 import { ExportService } from './services/export.service';
@@ -64,7 +73,9 @@ export class WeatherController {
 
   @Get('insights')
   @UseGuards(JwtAuthGuard)
-  async getInsights(@Query('city') city?: string) {
+  async getInsights(
+    @Query('city') city?: string,
+  ): Promise<{ success: boolean; data: any }> {
     const insights = await this.insightsService.generateInsights(city);
     return {
       success: true,
@@ -79,7 +90,10 @@ export class WeatherController {
     const csv = this.exportService.generateCSV(data);
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=weather_logs.csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=weather_logs.csv',
+    );
     res.send(csv);
   }
 
@@ -89,8 +103,14 @@ export class WeatherController {
     const data = await this.weatherService.getAllForExport(query);
     const buffer = await this.exportService.generateXLSX(data);
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=weather_logs.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=weather_logs.xlsx',
+    );
     res.send(buffer);
   }
 }

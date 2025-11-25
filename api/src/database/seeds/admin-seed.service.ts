@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 
 import { User, UserDocument } from '../../modules/users/schemas/user.schema';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AdminSeedService {
@@ -14,13 +14,19 @@ export class AdminSeedService {
   ) {}
 
   async seed(): Promise<void> {
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@example.com');
-    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD', '123456');
+    const adminEmail = this.configService.get<string>(
+      'ADMIN_EMAIL',
+      'admin@example.com',
+    );
+    const adminPassword = this.configService.get<string>(
+      'ADMIN_PASSWORD',
+      '123456',
+    );
 
     const existingAdmin = await this.userModel.findOne({ email: adminEmail });
 
     if (existingAdmin) {
-      console.log(`✅ Admin user already exists: ${adminEmail}`);
+      console.log(`User already exists: ${adminEmail}`);
       return;
     }
 
@@ -35,6 +41,6 @@ export class AdminSeedService {
     });
 
     await admin.save();
-    console.log(`🌱 Admin user created: ${adminEmail}`);
+    console.log(`Admin user created: ${adminEmail}`);
   }
 }

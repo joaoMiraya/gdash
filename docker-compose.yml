@@ -5,6 +5,7 @@ services:
     build:
       context: ./collector
       dockerfile: Dockerfile
+    working_dir: /app
     environment:
       - WEATHER_API_KEY=${WEATHER_API_KEY}
       - WEATHER_CITY=${WEATHER_CITY:-Ourinhos}
@@ -24,7 +25,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./app:/app
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:4000
@@ -40,7 +41,7 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ./backend:/app
+      - ./api:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development

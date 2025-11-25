@@ -54,6 +54,4 @@ export class UserResponseDto {
   email: string;
   role: string;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 }
