@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { MiddlewareConsumer, Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 
@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { WeatherModule } from './modules/weather/weather.module';
 import { AdminSeedService } from './database/seeds/admin-seed.service';
 import { User, UserSchema } from './modules/users/schemas/user.schema';
+import { LoggerMiddleware } from './common/middlewares/request-logger.middleware';
 
 @Module({
   imports: [
@@ -35,6 +36,9 @@ import { User, UserSchema } from './modules/users/schemas/user.schema';
 export class AppModule implements OnModuleInit {
   constructor(private readonly adminSeedService: AdminSeedService) {}
 
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
   async onModuleInit() {
     await this.adminSeedService.seed();
   }

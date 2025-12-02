@@ -10,6 +10,10 @@ import {
 import { AuthService } from '../services/auth.service';
 import { LoginDto, RegisterDto } from '../dto/auth.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import type {
+  RequestWithUser,
+  UserPayload,
+} from '@/common/interfaces/auth-request.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -35,7 +39,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async me(@Request() req: any) {
+  me(@Request() req: RequestWithUser): { success: boolean; data: UserPayload } {
     return {
       success: true,
       data: req.user,
