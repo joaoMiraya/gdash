@@ -48,14 +48,13 @@ func (c *Consumer) Connect() error {
 		return fmt.Errorf("failed to open channel: %w", err)
 	}
 
-	// Declara a fila
 	_, err = c.channel.QueueDeclare(
 		c.cfg.QueueName,
 		true,  // durable
-		false, // delete when unused
+		false, // auto-delete
 		false, // exclusive
 		false, // no-wait
-		nil,   // arguments
+		nil,   // args
 	)
 	if err != nil {
 		return fmt.Errorf("failed to declare queue: %w", err)
@@ -114,12 +113,10 @@ func (c *Consumer) processMessage(msg amqp.Delivery) {
 		c.logger.Error("json_parse_error", map[string]interface{}{
 			"error": err.Error(),
 		})
-		// Rejeita sem requeue (mensagem inválida)
 		msg.Nack(false, false)
 		return
 	}
 
-	// Valida dados
 	if errors := weather.Validate(); len(errors) > 0 {
 		c.logger.Error("validation_error", map[string]interface{}{
 			"errors": errors,
@@ -129,13 +126,11 @@ func (c *Consumer) processMessage(msg amqp.Delivery) {
 		return
 	}
 
-	// Envia para API com retry
 	if err := c.sendWithRetry(&weather); err != nil {
 		c.logger.Error("send_failed_after_retries", map[string]interface{}{
 			"error": err.Error(),
 			"city":  weather.City,
 		})
-		// Requeue para tentar novamente depois
 		msg.Nack(false, true)
 		return
 	}

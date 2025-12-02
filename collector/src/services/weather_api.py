@@ -15,12 +15,11 @@ class WeatherAPIClient:
         self.client = httpx.Client(timeout=30.0)
     
     def fetch_weather(self) -> Optional[WeatherData]:
-        """Busca dados do clima na OpenWeatherMap API"""
         try:
             params = {
                 "q": self.settings.weather_city,
                 "appid": self.settings.weather_api_key,
-                "units": "metric",  # Celsius
+                "units": "metric",
                 "lang": "pt_br"
             }
             
